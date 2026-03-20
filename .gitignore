@@ -1,0 +1,5 @@
+node_modules/
+.env
+.env.local
+image_0.png
+*.log
