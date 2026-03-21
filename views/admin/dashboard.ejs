@@ -1,0 +1,224 @@
+<%- include('../partials/header') %>
+
+<% if (isVisitor) { %>
+  <!-- Demo Mode Badge -->
+  <div style="position: fixed; top: 80px; right: 20px; background: #ff00ff; color: #fff; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 0 10px #ff00ff; z-index: 9999; pointer-events: none;">
+    DEMO MODE
+  </div>
+<% } %>
+
+<!-- TOP SETTINGS GRID -->
+<div class="admin-top-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+  
+  <!-- Column 1: Upload Art -->
+  <div class="form-container" style="margin: 0; width: 100%; max-width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">Upload Art</h2>
+    </div>
+
+    <div id="status-message"></div>
+
+    <form action="/admin/upload" method="POST" enctype="multipart/form-data" onsubmit="return checkVisitor(event)">
+      <div class="form-group">
+        <label for="title">Art Title</label>
+        <input type="text" id="title" name="title" required>
+      </div>
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" style="min-height: 80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="image">Choose Image</label>
+        <input type="file" id="image" name="image" required>
+      </div>
+      <button type="submit" class="btn" <%= isVisitor ? 'disabled' : '' %>>Upload to Gallery</button>
+    </form>
+  </div>
+
+  <!-- Column 2: Footer & Social Settings -->
+  <div class="form-container" style="margin: 0; width: 100%; max-width: 100%;">
+    <h3 style="text-align: center; margin-bottom: 20px;">Footer & Social Settings</h3>
+    <form action="/admin/settings" method="POST" onsubmit="return checkVisitor(event)">
+      <div class="form-group">
+        <label>About Vibe</label>
+        <textarea name="aboutVibe" style="min-height: 80px;"><%= settings.aboutVibe %></textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="form-group"><label>Instagram</label><input type="text" name="instagramUrl" value="<%= settings.instagramUrl %>"></div>
+        <div class="form-group"><label>Twitter</label><input type="text" name="twitterUrl" value="<%= settings.twitterUrl %>"></div>
+        <div class="form-group"><label>LinkedIn</label><input type="text" name="linkedinUrl" value="<%= settings.linkedinUrl %>"></div>
+        <div class="form-group"><label>Dev Name</label><input type="text" name="devName" value="<%= settings.devName %>"></div>
+        <div class="form-group"><label>WhatsApp</label><input type="text" name="whatsapp" value="<%= settings.whatsapp %>"></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= settings.email %>"></div>
+      </div>
+      <button type="submit" class="btn" style="background-color: #17a2b8; margin-top: 10px;" <%= isVisitor ? 'disabled' : '' %>>Save Settings</button>
+    </form>
+  </div>
+</div>
+
+<!-- SECURITY SETTINGS -->
+<div class="form-container" style="margin-top: 30px; max-width: 1200px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h3 style="margin: 0; flex: 1; text-align: center;">Security Settings</h3>
+    <a href="/logout" class="btn" style="background-color: #6c757d; padding: 5px 15px; font-size: 0.9rem; width: auto; text-decoration: none;">Logout</a>
+  </div>
+  <form action="/admin/change-password" method="POST" style="display: flex; gap: 15px; align-items: flex-end; justify-content: center;" onsubmit="return checkVisitor(event)">
+    <div class="form-group" style="margin: 0; flex: 1; max-width: 400px;">
+      <label>New Password</label>
+      <input type="password" name="newPassword" required>
+    </div>
+    <button type="submit" class="btn" style="background-color: #28a745; width: auto; padding: 10px 30px;" <%= isVisitor ? 'disabled' : '' %>>Update Password</button>
+  </form>
+</div>
+
+<!-- HOME SHOWCASE SECTION -->
+<div class="container" style="margin-top: 40px; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #ff00ff;">
+  <h2 style="text-align: center; margin-bottom: 20px; color: #ff00ff;">Home Showcase (Max 9)</h2>
+  <div id="showcase-list" class="gallery">
+    <% const showcaseItems = artPieces.filter(a => a.isFeatured); %>
+    <% if (showcaseItems.length > 0) { %>
+      <% showcaseItems.forEach(art => { %>
+        <div class="art-card" style="border: 1px solid #ff00ff; overflow: hidden;">
+          <div style="overflow: hidden; height: 150px;">
+            <img src="<%= art.imageUrl %>" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div class="art-card-info">
+            <h4 style="font-size: 0.9rem; margin-bottom: 10px;"><%= art.title %></h4>
+            <button type="button" class="btn toggle-btn" data-id="<%= art._id %>" style="background-color: #ff00ff; font-size: 0.8rem; padding: 8px;">Remove</button>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p style="grid-column: 1 / -1; text-align: center; color: #888; padding: 20px;">No items in showcase. Add some from "Manage All Art" below!</p>
+    <% } %>
+  </div>
+</div>
+
+<!-- MANAGE ALL ART SECTION -->
+<div class="container" style="margin-top: 50px;">
+  <h2 style="text-align: center; margin-bottom: 10px;">Manage All Art</h2>
+  <p style="text-align: center; color: #666; margin-bottom: 30px; font-style: italic;">
+    (Click on <b>Home</b> to add your art to the Home Showcase to appear on the home page)
+  </p>
+  <div id="manage-list" class="gallery">
+    <% const availableItems = artPieces.filter(a => !a.isFeatured); %>
+    <% if (availableItems.length > 0) { %>
+      <% availableItems.forEach(art => { %>
+        <div class="art-card" style="display: flex; flex-direction: row; height: 120px; overflow: hidden;">
+          <div style="overflow: hidden; width: 120px; height: 120px; flex-shrink: 0;">
+            <img src="<%= art.imageUrl %>" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div class="art-card-info" style="flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;">
+            <h4 style="margin: 0; font-size: 1rem;"><%= art.title %></h4>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn toggle-btn" data-id="<%= art._id %>" style="background-color: #333; padding: 5px 15px; font-size: 0.8rem; width: auto;">Home</button>
+              
+              <a href="/admin/edit/<%= art._id %>" class="btn" style="background-color: #007bff; padding: 5px 15px; font-size: 0.8rem; width: auto; text-decoration: none; text-align: center;">Edit</a>
+              
+              <form action="/admin/delete/<%= art._id %>" method="POST" onsubmit="return checkVisitor(event)" style="margin: 0;">
+                <button type="submit" class="btn" style="background-color: #dc3545; padding: 5px 15px; font-size: 0.8rem; width: auto;" <%= isVisitor ? 'disabled' : '' %>>Del</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p style="grid-column: 1 / -1; text-align: center; color: #888;">No artworks found outside of the showcase.</p>
+    <% } %>
+  </div>
+</div>
+
+<script>
+  const IS_VISITOR = <%= isVisitor %>;
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.innerText = message;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#333';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    toast.style.zIndex = '10000';
+    toast.style.fontSize = '0.9rem';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function checkVisitor(e) {
+    if (IS_VISITOR) {
+      if (e && e.type === 'submit') {
+        e.preventDefault();
+        showToast('Action disabled in Demo Mode');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Robust Event Delegation for Toggle Buttons
+  document.addEventListener('click', async function(e) {
+    if (e.target && e.target.classList.contains('toggle-btn')) {
+      const btn = e.target;
+      const id = btn.getAttribute('data-id');
+      const originalText = btn.innerText;
+      
+      btn.innerText = '...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/admin/toggle-showcase', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          // In visitor mode, we reload to show simulated changes
+          window.location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to move artwork'));
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        alert('Network Error: Please check your connection.');
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+  });
+
+  // Handle file selection to auto-fill title
+  const imageInput = document.getElementById('image');
+  if (imageInput) {
+    imageInput.addEventListener('change', function(e) {
+      const fileName = e.target.files[0]?.name;
+      if (fileName) {
+        const cleanTitle = fileName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+        document.getElementById('title').value = cleanTitle;
+      }
+    });
+  }
+
+  // Status message handlers
+  const urlParams = new URLSearchParams(window.location.search);
+  const statusDiv = document.getElementById('status-message');
+  if (urlParams.has('success')) statusDiv.innerHTML = '<div class="alert alert-success">Artwork Uploaded!</div>';
+  if (urlParams.has('deleted')) statusDiv.innerHTML = '<div class="alert alert-success" style="background-color: #f8d7da; color: #721c24;">Deleted!</div>';
+  if (urlParams.has('settings_updated')) statusDiv.innerHTML = '<div class="alert alert-success">Settings saved!</div>';
+  if (urlParams.has('password_updated')) statusDiv.innerHTML = '<div class="alert alert-success">Password updated!</div>';
+  if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
+</script>
+
+<%- include('../partials/footer') %>

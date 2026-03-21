@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+image_0.png
+*.log
+.env
+.env.local
+node_modules/
+.astro/
+dist/

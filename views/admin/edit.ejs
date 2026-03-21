@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+
+<div class="form-container">
+  <h2>Edit Art Piece</h2>
+  
+  <div style="text-align: center; margin-bottom: 20px;">
+    <img src="<%= art.imageUrl %>" alt="<%= art.title %>" style="max-width: 200px; border-radius: 8px;">
+  </div>
+
+  <form action="/admin/edit/<%= art._id %>" method="POST" onsubmit="return checkVisitor(event)">
+    <div class="form-group">
+      <label for="title">Art Title</label>
+      <input type="text" id="title" name="title" value="<%= art.title %>" required>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea id="description" name="description"><%= art.description %></textarea>
+    </div>
+
+    <% if (!isVisitor) { %>
+      <button type="submit" class="btn">Update Art Piece</button>
+    <% } else { %>
+      <p style="color: #888; text-align: center; font-style: italic;">Update disabled in Demo Mode</p>
+    <% } %>
+    <a href="/admin" style="display: block; text-align: center; margin-top: 15px; color: #666; text-decoration: none;">Cancel</a>
+  </form>
+</div>
+
+<script>
+  const IS_VISITOR = <%= isVisitor %>;
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.innerText = message;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#333';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    toast.style.zIndex = '10000';
+    toast.style.fontSize = '0.9rem';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function checkVisitor(e) {
+    if (IS_VISITOR) {
+      e.preventDefault();
+      showToast('Action disabled in Demo Mode');
+      return false;
+    }
+    return true;
+  }
+</script>
+
+<%- include('../partials/footer') %>
