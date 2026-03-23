@@ -51,7 +51,6 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'vibe_secret_fallback',
   resave: false,
   saveUninitialized: false,
-  rolling: true,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
     collectionName: 'sessions'
@@ -74,24 +73,17 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// Check if user is not a demo account (restricts mutations)
-const isNotDemo = (req, res, next) => {
-  if (req.session.isDemo) {
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
-      return res.status(403).json({ error: 'Action not allowed in demo mode.' });
-    }
-    return res.redirect('/admin?error=demo_restricted');
-  }
-  next();
-};
-
 // Global view variables
 app.use(async (req, res, next) => {
   res.locals.isAuthenticated = !!(req.session && req.session.isLoggedIn);
   res.locals.isDemo = !!(req.session && req.session.isDemo);
   try {
-    const settings = await Settings.findOne();
-    res.locals.settings = settings || {};
+    if (res.locals.isDemo && req.session.demoSettings) {
+      res.locals.settings = req.session.demoSettings;
+    } else {
+      const settings = await Settings.findOne();
+      res.locals.settings = settings || {};
+    }
   } catch (err) {
     console.error('Error fetching global settings:', err);
     res.locals.settings = {};
@@ -114,18 +106,11 @@ const upload = multer({
 app.get('/', async (req, res, next) => {
   try {
     let featuredArt;
-    if (req.session.isDemo && req.session.demoShowcase) {
-      // Fetch specifically those IDs stored in the session
-      featuredArt = await Art.find({ _id: { $in: req.session.demoShowcase } })
-        .sort({ createdAt: -1 });
+    if (req.session.isDemo && req.session.demoArt) {
+      featuredArt = req.session.demoArt.filter(a => a.isFeatured).slice(0, 9);
     } else {
-      // Normal behavior
-      featuredArt = await Art.find({ isFeatured: true })
-        .sort({ createdAt: -1 })
-        .limit(9);
+      featuredArt = await Art.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(9);
     }
-    
-    // Pass featuredArt to the view, an empty array if none found
     res.render('index', { featuredArt: featuredArt || [] });
   } catch (err) {
     next(err);
@@ -134,7 +119,12 @@ app.get('/', async (req, res, next) => {
 
 app.get('/collection', async (req, res, next) => {
   try {
-    const artPieces = await Art.find().sort({ createdAt: -1 });
+    let artPieces;
+    if (req.session.isDemo && req.session.demoArt) {
+      artPieces = req.session.demoArt;
+    } else {
+      artPieces = await Art.find().sort({ createdAt: -1 });
+    }
     res.render('collection', { artPieces });
   } catch (err) {
     next(err);
@@ -150,22 +140,30 @@ app.post('/login', async (req, res, next) => {
   let { username, password } = req.body;
   try {
     const trimmedUsername = username ? username.trim().toLowerCase() : '';
-// Check for demo account
-if (trimmedUsername === 'demo' && password === 'demo') {
-  console.log('DEMO LOGIN DETECTED');
-  req.session.isLoggedIn = true;
-  req.session.isDemo = true;
-  req.session.user = { username: 'demo', _id: '507f1f77bcf86cd799439011' };
 
-  // Initialize demo session state with current DB featured items
-  const featured = await Art.find({ isFeatured: true }, '_id');
-  req.session.demoShowcase = featured.map(a => a._id.toString());
+    // Fresh Cookie-based Demo System
+    if (trimmedUsername === 'demo' && password === 'demo') {
+      req.session.isLoggedIn = true;
+      req.session.isDemo = true;
+      req.session.user = { username: 'demo', _id: '507f1f77bcf86cd799439011' };
+      
+      // 1. Session-only cookie (expires on browser close)
+      req.session.cookie.maxAge = null;
+      req.session.cookie.expires = false;
 
-  return req.session.save((err) => {
-    if (err) return next(err);
-    res.redirect('/admin');
-  });
-}
+      // 2. Capture initial state for this specific session
+      const allArt = await Art.find().sort({ createdAt: -1 });
+      const settings = await Settings.findOne();
+      
+      // Store as plain objects in session
+      req.session.demoArt = allArt.map(a => a.toObject());
+      req.session.demoSettings = settings ? settings.toObject() : {};
+
+      return req.session.save((err) => {
+        if (err) return next(err);
+        res.redirect('/admin');
+      });
+    }
 
     const userCount = await User.countDocuments();
 
@@ -176,7 +174,6 @@ if (trimmedUsername === 'demo' && password === 'demo') {
         await newUser.save();
         req.session.isLoggedIn = true;
         req.session.user = newUser;
-        req.session.isDemo = false;
         return res.redirect('/admin');
       } else {
         return res.render('login', { error: 'Invalid credentials. Use admin/admin for first login.' });
@@ -191,7 +188,6 @@ if (trimmedUsername === 'demo' && password === 'demo') {
 
     req.session.isLoggedIn = true;
     req.session.user = user;
-    req.session.isDemo = false;
     res.redirect('/admin');
   } catch (err) {
     next(err);
@@ -209,25 +205,19 @@ app.get('/logout', (req, res) => {
 
 app.get('/admin', isAdmin, async (req, res, next) => {
   try {
-    let artPieces = await Art.find().sort({ createdAt: -1 });
-
-    // In demo mode, we override isFeatured from session
-    if (req.session.isDemo && req.session.demoShowcase) {
-      artPieces = artPieces.map(art => {
-        // Convert Mongoose doc to object so we can modify properties
-        const artObj = art.toObject();
-        artObj.isFeatured = req.session.demoShowcase.includes(art._id.toString());
-        return artObj;
-      });
+    let artPieces;
+    if (req.session.isDemo && req.session.demoArt) {
+      artPieces = req.session.demoArt;
+    } else {
+      artPieces = await Art.find().sort({ createdAt: -1 });
     }
-
     res.render('admin/dashboard', { artPieces });
   } catch (err) {
     next(err);
   }
 });
 
-app.post('/admin/upload', isAdmin, isNotDemo, upload.single('image'), async (req, res, next) => {
+app.post('/admin/upload', isAdmin, upload.single('image'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).send('Please upload an image.');
@@ -235,6 +225,22 @@ app.post('/admin/upload', isAdmin, isNotDemo, upload.single('image'), async (req
     const { title, description } = req.body;
     const imageUrl = req.file.path;
     const cloudinaryId = req.file.filename;
+
+    if (req.session.isDemo) {
+      const newArt = {
+        _id: 'demo_' + Date.now(),
+        title,
+        description,
+        imageUrl,
+        cloudinaryId,
+        isFeatured: false,
+        createdAt: new Date()
+      };
+      if (!req.session.demoArt) req.session.demoArt = [];
+      req.session.demoArt.unshift(newArt);
+      return req.session.save(() => res.redirect('/admin?success=true'));
+    }
+
     const newArt = new Art({ title, description, imageUrl, cloudinaryId, order: 99 });
     await newArt.save();
     res.redirect('/admin?success=true');
@@ -243,8 +249,13 @@ app.post('/admin/upload', isAdmin, isNotDemo, upload.single('image'), async (req
   }
 });
 
-app.post('/admin/delete/:id', isAdmin, isNotDemo, async (req, res, next) => {
+app.post('/admin/delete/:id', isAdmin, async (req, res, next) => {
   try {
+    if (req.session.isDemo && req.session.demoArt) {
+      req.session.demoArt = req.session.demoArt.filter(a => a._id.toString() !== req.params.id);
+      return req.session.save(() => res.redirect('/admin?deleted=true'));
+    }
+
     const art = await Art.findById(req.params.id);
     if (!art) return res.status(404).send('Art piece not found.');
     await cloudinary.uploader.destroy(art.cloudinaryId);
@@ -257,7 +268,12 @@ app.post('/admin/delete/:id', isAdmin, isNotDemo, async (req, res, next) => {
 
 app.get('/admin/edit/:id', isAdmin, async (req, res, next) => {
   try {
-    const art = await Art.findById(req.params.id);
+    let art;
+    if (req.session.isDemo && req.session.demoArt) {
+      art = req.session.demoArt.find(a => a._id.toString() === req.params.id);
+    } else {
+      art = await Art.findById(req.params.id);
+    }
     if (!art) return res.status(404).send('Art piece not found.');
     res.render('admin/edit', { art });
   } catch (err) {
@@ -265,9 +281,18 @@ app.get('/admin/edit/:id', isAdmin, async (req, res, next) => {
   }
 });
 
-app.post('/admin/edit/:id', isAdmin, isNotDemo, async (req, res, next) => {
+app.post('/admin/edit/:id', isAdmin, async (req, res, next) => {
   try {
     const { title, description } = req.body;
+    if (req.session.isDemo && req.session.demoArt) {
+      const index = req.session.demoArt.findIndex(a => a._id.toString() === req.params.id);
+      if (index !== -1) {
+        req.session.demoArt[index].title = title;
+        req.session.demoArt[index].description = description;
+      }
+      return req.session.save(() => res.redirect('/admin?updated=true'));
+    }
+
     await Art.findByIdAndUpdate(req.params.id, { title, description });
     res.redirect('/admin?updated=true');
   } catch (err) {
@@ -275,8 +300,11 @@ app.post('/admin/edit/:id', isAdmin, isNotDemo, async (req, res, next) => {
   }
 });
 
-app.post('/admin/change-password', isAdmin, isNotDemo, async (req, res, next) => {
+app.post('/admin/change-password', isAdmin, async (req, res, next) => {
   try {
+    if (req.session.isDemo) {
+      return res.redirect('/admin?error=demo_restricted');
+    }
     const { newPassword } = req.body;
     if (!newPassword || newPassword.length < 5) return res.redirect('/admin?error=password_too_short');
     const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -287,9 +315,13 @@ app.post('/admin/change-password', isAdmin, isNotDemo, async (req, res, next) =>
   }
 });
 
-app.post('/admin/settings', isAdmin, isNotDemo, async (req, res, next) => {
+app.post('/admin/settings', isAdmin, async (req, res, next) => {
   try {
     const { aboutVibe, instagramUrl, twitterUrl, linkedinUrl, devName, whatsapp, email } = req.body;
+    if (req.session.isDemo) {
+      req.session.demoSettings = { aboutVibe, instagramUrl, twitterUrl, linkedinUrl, devName, whatsapp, email };
+      return req.session.save(() => res.redirect('/admin?settings_updated=true'));
+    }
     await Settings.findOneAndUpdate({}, { aboutVibe, instagramUrl, twitterUrl, linkedinUrl, devName, whatsapp, email }, { upsert: true });
     res.redirect('/admin?settings_updated=true');
   } catch (err) {
@@ -303,39 +335,28 @@ app.post('/admin/toggle-showcase', isAdmin, async (req, res, next) => {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'No ID provided' });
 
-    // Handle Demo Mode (Save to Session, not DB)
-    if (req.session.isDemo) {
-      if (!req.session.demoShowcase) req.session.demoShowcase = [];
-      const index = req.session.demoShowcase.indexOf(id);
-      let isFeatured = false;
+    if (req.session.isDemo && req.session.demoArt) {
+      const art = req.session.demoArt.find(a => a._id.toString() === id);
+      if (!art) return res.status(404).json({ error: 'Art piece not found' });
 
-      if (index === -1) {
-        if (req.session.demoShowcase.length >= 9) {
-          return res.status(400).json({ error: 'Showcase is full (Max 9 items)' });
-        }
-        req.session.demoShowcase.push(id);
-        isFeatured = true;
+      if (!art.isFeatured) {
+        const showcaseCount = req.session.demoArt.filter(a => a.isFeatured).length;
+        if (showcaseCount >= 9) return res.status(400).json({ error: 'Showcase is full (Max 9 items)' });
+        art.isFeatured = true;
       } else {
-        req.session.demoShowcase.splice(index, 1);
-        isFeatured = false;
+        art.isFeatured = false;
       }
-      return req.session.save(() => res.json({ success: true, isFeatured }));
+      return req.session.save(() => res.json({ success: true, isFeatured: art.isFeatured }));
     }
 
-    // Normal Admin Mode (Save to DB)
     const art = await Art.findById(id);
     if (!art) return res.status(404).json({ error: 'Art piece not found' });
 
-    // If NOT featured
     if (!art.isFeatured) {
-      // Check limit: count how many are featured
       const showcaseCount = await Art.countDocuments({ isFeatured: true });
-      if (showcaseCount >= 9) {
-        return res.status(400).json({ error: 'Showcase is full (Max 9 items)' });
-      }
+      if (showcaseCount >= 9) return res.status(400).json({ error: 'Showcase is full (Max 9 items)' });
       art.isFeatured = true;
     } else {
-      // If ALREADY featured, remove it
       art.isFeatured = false;
     }
 

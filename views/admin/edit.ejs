@@ -1,29 +1,5 @@
 <%- include('../partials/header') %>
 
-<% if (locals.isDemo) { %>
-  <div style="text-align: center; margin: 20px auto;">
-    <h2 style="margin: 0; color: #ff00ff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 5px #ff00ff; font-size: 1.2rem;">Demo Mode</h2>
-  </div>
-
-  <script>
-    document.addEventListener('click', (e) => {
-      const target = e.target.closest('button, a, input[type="submit"]');
-      const headerLink = e.target.closest('.main-header a');
-      const logoutBtn = e.target.closest('[href="/logout"]');
-
-      if (headerLink || logoutBtn) {
-        return;
-      }
-      if (target) {
-        e.preventDefault();
-        e.stopPropagation();
-        alert('demo mode contact for full expirence');
-        return false;
-      }
-    }, true);
-  </script>
-<% } %>
-
 <div class="form-container">
   <h2>Edit Art Piece</h2>
   

@@ -3,45 +3,27 @@
 <% if (isDemo) { %>
   <div style="text-align: center; margin: 20px 0;">
     <h2 style="margin: 0; color: #ff00ff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 5px #ff00ff;">Demo Mode</h2>
+    <p style="color: #666; margin-top: 5px; font-style: italic; font-size: 0.9rem;">(Changes are temporary and only visible to you in this session)</p>
   </div>
 
   <style>
-    /* Visually lock elements except toggle buttons, logout, and header links */
-    form:not([action="/logout"]), 
-    input, 
-    textarea,
-    .btn:not(.toggle-btn):not([href="/logout"]) {
+    /* Visually disable password form */
+    form[action="/admin/change-password"] input,
+    form[action="/admin/change-password"] button {
+      opacity: 0.6 !important;
       cursor: not-allowed !important;
-    }
-    
-    /* Ensure toggle buttons and header links look clickable */
-    .toggle-btn, .main-header a {
-      cursor: pointer !important;
-      opacity: 1 !important;
     }
   </style>
 
   <script>
-    document.addEventListener('click', (e) => {
-      // Find the closest interactive element
-      const toggleBtn = e.target.closest('.toggle-btn');
-      const logoutBtn = e.target.closest('[href="/logout"]');
-      const headerLink = e.target.closest('.main-header a');
-      const otherClickable = e.target.closest('button, a, input[type="submit"]');
-
-      // 1. If it's a toggle button, logout, or header link, let the event proceed normally
-      if (toggleBtn || logoutBtn || headerLink) {
-        return;
-      }
-
-      // 2. If it's any other administrative button/link, intercept it
-      if (otherClickable) {
+    // Intercept Password Update click
+    document.addEventListener('submit', (e) => {
+      if (e.target.action && e.target.action.includes('change-password')) {
         e.preventDefault();
-        e.stopPropagation();
-        alert('demo mode contact for full expirence');
+        alert('not allowed in demo mode');
         return false;
       }
-    }, true); // Capture phase to intercept early
+    });
   </script>
 <% } %>
 
@@ -170,7 +152,7 @@
   // Robust Event Delegation for Toggle Buttons
   document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('toggle-btn')) {
-      const btn = e.target;
+      const btn = e.target.closest('.toggle-btn');
       const artId = btn.getAttribute('data-id');
       
       try {
