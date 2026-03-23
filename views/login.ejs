@@ -1,0 +1,93 @@
+<%- include('partials/header') %>
+
+<style>
+  body {
+    background-color: #121212;
+    color: #fff;
+  }
+  .login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .login-logo {
+    margin-bottom: 30px;
+  }
+  .login-logo img {
+    height: 60px;
+    width: auto;
+  }
+  .form-group label {
+    color: #bbb;
+  }
+  .form-group input {
+    background: #252525;
+    border: 1px solid #333;
+    color: #fff;
+  }
+  .form-group input:focus {
+    border-color: #ff00ff;
+    outline: none;
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+  }
+  .btn-login {
+    background-color: #ff00ff;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .btn-login:hover {
+    background-color: #e600e6;
+  }
+  .error-msg {
+    color: #ff4d4d;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+  }
+</style>
+
+<div class="login-container">
+  <div class="login-logo">
+    <img src="/images/vibe_logo.png" alt="Vibe Neon Logo">
+  </div>
+  
+  <h2>Admin Access</h2>
+  <p style="color: #666; margin-bottom: 25px; font-size: 0.9rem;">Sign in to manage your portfolio</p>
+
+  <% if (error) { %>
+    <div class="error-msg">
+      <%= error %>
+    </div>
+  <% } %>
+
+  <form action="/login" method="POST">
+    <div class="form-group" style="text-align: left; margin-bottom: 15px;">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" placeholder="Enter username" required style="width: 100%; padding: 12px; margin-top: 5px; border-radius: 4px;">
+    </div>
+
+    <div class="form-group" style="text-align: left; margin-bottom: 25px;">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter password" required style="width: 100%; padding: 12px; margin-top: 5px; border-radius: 4px;">
+    </div>
+
+    <button type="submit" class="btn-login">Login</button>
+  </form>
+
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; color: #666; font-size: 0.85rem;">
+    <p>Demo Access: <strong>demo</strong> / <strong>demo</strong></p>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

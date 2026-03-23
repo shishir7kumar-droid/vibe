@@ -1,0 +1,198 @@
+<%- include('../partials/header') %>
+
+<% if (isDemo) { %>
+  <div style="text-align: center; margin: 20px 0;">
+    <h2 style="margin: 0; color: #ff00ff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 5px #ff00ff;">Demo Mode</h2>
+  </div>
+
+  <style>
+    /* Visually lock elements except toggle buttons, logout, and header links */
+    form:not([action="/logout"]), 
+    input, 
+    textarea,
+    .btn:not(.toggle-btn):not([href="/logout"]) {
+      cursor: not-allowed !important;
+    }
+    
+    /* Ensure toggle buttons and header links look clickable */
+    .toggle-btn, .main-header a {
+      cursor: pointer !important;
+      opacity: 1 !important;
+    }
+  </style>
+
+  <script>
+    document.addEventListener('click', (e) => {
+      // Find the closest interactive element
+      const toggleBtn = e.target.closest('.toggle-btn');
+      const logoutBtn = e.target.closest('[href="/logout"]');
+      const headerLink = e.target.closest('.main-header a');
+      const otherClickable = e.target.closest('button, a, input[type="submit"]');
+
+      // 1. If it's a toggle button, logout, or header link, let the event proceed normally
+      if (toggleBtn || logoutBtn || headerLink) {
+        return;
+      }
+
+      // 2. If it's any other administrative button/link, intercept it
+      if (otherClickable) {
+        e.preventDefault();
+        e.stopPropagation();
+        alert('demo mode contact for full expirence');
+        return false;
+      }
+    }, true); // Capture phase to intercept early
+  </script>
+<% } %>
+
+<!-- TOP SETTINGS GRID -->
+<div class="admin-top-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+  
+  <!-- Column 1: Upload Art -->
+  <div class="form-container" style="margin: 0; width: 100%; max-width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">Upload Art</h2>
+    </div>
+
+    <div id="status-message"></div>
+
+    <form action="/admin/upload" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="title">Art Title</label>
+        <input type="text" id="title" name="title" required>
+      </div>
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" style="min-height: 80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="image">Choose Image</label>
+        <input type="file" id="image" name="image" required>
+      </div>
+      <button type="submit" class="btn">Upload to Gallery</button>
+    </form>
+  </div>
+
+  <!-- Column 2: Footer & Social Settings -->
+  <div class="form-container" style="margin: 0; width: 100%; max-width: 100%;">
+    <h3 style="text-align: center; margin-bottom: 20px;">Footer & Social Settings</h3>
+    <form action="/admin/settings" method="POST">
+      <div class="form-group">
+        <label>About Vibe</label>
+        <textarea name="aboutVibe" style="min-height: 80px;"><%= settings.aboutVibe %></textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="form-group"><label>Instagram</label><input type="text" name="instagramUrl" value="<%= settings.instagramUrl %>"></div>
+        <div class="form-group"><label>Twitter</label><input type="text" name="twitterUrl" value="<%= settings.twitterUrl %>"></div>
+        <div class="form-group"><label>LinkedIn</label><input type="text" name="linkedinUrl" value="<%= settings.linkedinUrl %>"></div>
+        <div class="form-group"><label>Dev Name</label><input type="text" name="devName" value="<%= settings.devName %>"></div>
+        <div class="form-group"><label>WhatsApp</label><input type="text" name="whatsapp" value="<%= settings.whatsapp %>"></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= settings.email %>"></div>
+      </div>
+      <button type="submit" class="btn" style="background-color: #17a2b8; margin-top: 10px;">Save Settings</button>
+    </form>
+  </div>
+</div>
+
+<!-- SECURITY SETTINGS -->
+<div class="form-container" style="margin-top: 30px; max-width: 1200px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h3 style="margin: 0; flex: 1; text-align: center;">Security Settings</h3>
+    <a href="/logout" class="btn" style="background-color: #6c757d; padding: 5px 15px; font-size: 0.9rem; width: auto; text-decoration: none;">Logout</a>
+  </div>
+  <form action="/admin/change-password" method="POST" style="display: flex; gap: 15px; align-items: flex-end; justify-content: center;">
+    <div class="form-group" style="margin: 0; flex: 1; max-width: 400px;">
+      <label>New Password</label>
+      <input type="password" name="newPassword" required>
+    </div>
+    <button type="submit" class="btn" style="background-color: #28a745; width: auto; padding: 10px 30px;">Update Password</button>
+  </form>
+</div>
+
+<!-- HOME SHOWCASE SECTION -->
+<div class="container" style="margin-top: 40px; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #ff00ff;">
+  <h2 style="text-align: center; margin-bottom: 20px; color: #ff00ff;">Home Showcase (Max 9)</h2>
+  <div id="showcase-list" class="gallery">
+    <% const showcaseItems = artPieces.filter(a => a.isFeatured); %>
+    <% if (showcaseItems.length > 0) { %>
+      <% showcaseItems.forEach(art => { %>
+        <div class="art-card" style="border: 1px solid #ff00ff; overflow: hidden;">
+          <div style="overflow: hidden; height: 150px;">
+            <img src="<%= art.imageUrl %>" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div class="art-card-info">
+            <h4 style="font-size: 0.9rem; margin-bottom: 10px;"><%= art.title %></h4>
+            <button type="button" class="btn toggle-btn" data-id="<%= art._id %>" style="background-color: #ff00ff; font-size: 0.8rem; padding: 8px;">Remove</button>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p style="grid-column: 1 / -1; text-align: center; color: #888; padding: 20px;">No items in showcase. Add some from "Manage All Art" below!</p>
+    <% } %>
+  </div>
+</div>
+
+<!-- MANAGE ALL ART SECTION -->
+<div class="container" style="margin-top: 50px;">
+  <h2 style="text-align: center; margin-bottom: 10px;">Manage All Art</h2>
+  <p style="text-align: center; color: #666; margin-bottom: 30px; font-style: italic;">
+    (Click on <b>Home</b> to add your art to the Home Showcase to appear on the home page)
+  </p>
+  <div id="manage-list" class="gallery">
+    <% const availableItems = artPieces.filter(a => !a.isFeatured); %>
+    <% if (availableItems.length > 0) { %>
+      <% availableItems.forEach(art => { %>
+        <div class="art-card" style="display: flex; flex-direction: row; height: 120px; overflow: hidden;">
+          <div style="overflow: hidden; width: 120px; height: 120px; flex-shrink: 0;">
+            <img src="<%= art.imageUrl %>" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div class="art-card-info" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 15px;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn toggle-btn" data-id="<%= art._id %>" style="background-color: #333; padding: 4px 8px; font-size: 0.75rem; width: auto; flex: 1; min-width: 45px;">Home</button>
+              
+              <a href="/admin/edit/<%= art._id %>" class="btn" style="background-color: #007bff; padding: 4px 8px; font-size: 0.75rem; width: auto; text-decoration: none; text-align: center; flex: 1; min-width: 45px;">Edit</a>
+              
+              <form action="/admin/delete/<%= art._id %>" method="POST" onsubmit="return confirm('Are you sure?');" style="margin: 0; flex: 1; min-width: 45px;">
+                <button type="submit" class="btn" style="background-color: #dc3545; padding: 4px 8px; font-size: 0.75rem; width: 100%;">Del</button>
+              </form>
+            </div>
+            <h4 style="margin: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= art.title %>"><%= art.title %></h4>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p style="grid-column: 1 / -1; text-align: center; color: #888;">No artworks found outside of the showcase.</p>
+    <% } %>
+  </div>
+</div>
+
+<script>
+  // Robust Event Delegation for Toggle Buttons
+  document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('toggle-btn')) {
+      const btn = e.target;
+      const artId = btn.getAttribute('data-id');
+      
+      try {
+        const response = await fetch('/admin/toggle-showcase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: artId })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          // Simply reload to reflect grid changes
+          window.location.reload();
+        } else {
+          alert(data.error || 'Failed to toggle showcase');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error connecting to server');
+      }
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

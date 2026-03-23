@@ -1,0 +1,32 @@
+<%- include('partials/header') %>
+
+<header style="text-align: center; margin-bottom: 40px;">
+  <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Full Collection</h1>
+  <p style="color: #666;">Explore all our art pieces.</p>
+</header>
+
+<div class="gallery">
+  <% if (artPieces && artPieces.length > 0) { %>
+    <% artPieces.forEach(art => { %>
+      <div class="art-card">
+        <img src="<%= art.imageUrl %>" alt="<%= art.title %>" loading="lazy">
+        <div class="art-card-info">
+          <h3><%= art.title %></h3>
+          <% if (art.description) { %>
+            <p><%= art.description %></p>
+          <% } %>
+        </div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div style="grid-column: 1 / -1; text-align: center; margin-top: 50px;">
+      <p>No art pieces found.</p>
+    </div>
+  <% } %>
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+  <a href="/" class="btn" style="display: inline-block; width: auto; background-color: #6c757d; text-decoration: none;">Back to Showcase</a>
+</div>
+
+<%- include('partials/footer') %>

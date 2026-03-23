@@ -1,0 +1,39 @@
+  </div> <!-- Closing main container div from header.ejs -->
+
+  <footer class="main-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Column 1: About Vibe -->
+        <div class="footer-col">
+          <h4>About Vibe</h4>
+          <p><%= settings.aboutVibe %></p>
+        </div>
+
+        <!-- Column 2: Artist Socials -->
+        <div class="footer-col">
+          <h4>Artist</h4>
+          <ul class="footer-links">
+            <li><a href="<%= settings.instagramUrl %>" target="_blank" class="footer-btn-glow">Instagram</a></li>
+            <li><a href="<%= settings.twitterUrl %>" target="_blank" class="footer-btn-glow">Twitter</a></li>
+            <li><a href="<%= settings.linkedinUrl %>" target="_blank" class="footer-btn-glow">LinkedIn</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3: Developer Credits -->
+        <div class="footer-col">
+          <h4>Developer Credits</h4>
+          <p>Want a website like this? Contact <span class="glow-text"><%= settings.devName %></span></p>
+          <ul class="footer-links" style="margin-top: 15px;">
+            <li><a href="https://wa.me/<%= settings.whatsapp ? settings.whatsapp.replace(/\+/g, '') : '' %>" target="_blank" class="footer-btn-glow">WhatsApp</a></li>
+            <li><a href="mailto:<%= settings.email %>" class="footer-btn-glow">Email</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; <%= new Date().getFullYear() %> Vibe - All Rights Reserved.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
